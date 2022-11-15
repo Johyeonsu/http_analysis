@@ -100,7 +100,7 @@ func main() {
 				transport := &http.DefaultTransport
 				client.Transport = newDumpTransport(*transport)
 				if addr == "" {
-					url = parseURL(fmt.Sprintf("http://http-pf-anal.o-r.kr:7071/%s", handlerReq))
+					url = parseURL(fmt.Sprintf("http://http-pf.kro.kr:7071/%s", handlerReq))
 				}
 
 			} else if httpv == 2 {
@@ -115,7 +115,7 @@ func main() {
 				client.Transport = newDumpTransport(transport)
 
 				if addr == "" {
-					url = parseURL(fmt.Sprintf("https://http-pf-anal.o-r.kr:7072/%s", handlerReq))
+					url = parseURL(fmt.Sprintf("https://http-pf.kro.kr:7072/%s", handlerReq))
 				}
 
 			} else if httpv == 3 {
@@ -138,7 +138,7 @@ func main() {
 				client.Transport = newDumpTransport(transport)
 				defer transport.Close()
 				if addr == "" {
-					url = parseURL(fmt.Sprintf("https://http-pf-anal.o-r.kr:7073/%s", handlerReq))
+					url = parseURL(fmt.Sprintf("https://http-pf.kro.kr:7073/%s", handlerReq))
 				}
 			} else {
 				log.Fatalf("Only support http Version 1, 2, 3")
