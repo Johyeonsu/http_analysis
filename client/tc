@@ -1,0 +1,51 @@
+#!/bin/bash
+
+if [ $1 = 'del' ]
+then
+	sudo tc qdisc del dev enp0s3 root
+
+elif [ $1 = 'loss' ]
+then
+	sudo tc qdisc add dev enp0s3 root netem loss ${2}%
+
+elif [ $1 = 'cor' ]
+then
+	sudo tc qdisc add dev enp0s3 root netem corrupt ${2}%
+
+elif [ $1 = 'dup' ]
+then
+	sudo tc qdisc add dev enp0s3 root netem duplicate ${2}%
+
+elif [ $1 = 'delay' ]
+then
+	sudo tc qdisc add dev enp0s3 root netem delay ${2}ms
+fi
+
+sudo tc qdisc show dev enp0s3
+
+
+#sudo tc qdisc add dev enp0s3 handle 1: root htb default 11 
+#sudo tc class add dev enp0s3 parent 1:1 classid 1:11 htb rate 20mbit
+#
+#sudo tc qdisc del dev enp0s3 root
+#sudo tc qdisc add dev enp0s3 root netem loss 10%
+#sudo tc qdisc show dev enp0s3
+#
+#sudo tc qdisc del dev enp0s3 root
+#sudo tc qdisc add dev enp0s3 root netem corrupt 5%
+#sudo tc qdisc show dev enp0s3
+#
+#sudo tc qdisc del dev enp0s3 root
+#sudo tc qdisc add dev enp0s3 root netem duplicate 1%
+#sudo tc qdisc show dev enp0s3
+#
+#sudo tc qdisc del dev enp0s3 root
+#sudo tc qdisc add dev enp0s3 root netem delay 100ms
+#sudo tc qdisc show dev enp0s3
+#
+#sudo tc qdisc change dev enp0s3 root netem delay 100ms 10ms
+#sudo tc qdisc add dev enp0s3 root netem loss 10% delay 100ms 10ms 25%
+#sudo tc qdisc add dev enp0s3 root netem delay 100ms 20ms distribution normal
+#sudo tc qdisc add dev enp0s3 root netem delay 100ms 20ms 25% distribution normal
+
+
