@@ -1,3 +1,4 @@
+sudo tc qdisc del dev enp0s3 root
 sudo tc qdisc show dev enp0s3
 sleep 1
 
@@ -6,7 +7,7 @@ i=$2
 until [ $i -ge $3 ]
 do
 
-    echo "----------------------------------------------------$1 $i TEST START"
+    echo "----------------------------------------------------[HTTP$5] $1 $i TEST START"
         
     if [ $1 = 'loss' ]
     then
@@ -25,22 +26,25 @@ do
         sudo tc qdisc add dev enp0s3 root netem delay ${i}ms
     fi
    
-    if [ $1 = 't' ]
+    if [ $1 = 'c' ]
     then
-        ./client -http $5 -t $i
+        ./client -http $5 -c $i
         mv client_http${5}.log ${1}${i}_client_http${5}.log
 
     else
         sudo tc qdisc show dev enp0s3
         sleep 1
-        ./client -http ${5}
+        ./client -http ${5} -c 5 -r 10 -req img/z-768px-Sign-check-icon-1.png
+        mv client_http${5}.log ${1}${i}_client_http${5}.log
         sudo tc qdisc del dev enp0s3 root
+        sudo tc qdisc show dev enp0s3
     fi
     i=$(expr $i + $4)
 
-    echo "----------------------------------------------------$1 $a TEST DONE"
+    echo "----------------------------------------------------[HTTP$5] $1 $i TEST DONE"
     echo ""
 
+    sleep 2
 
 done
 

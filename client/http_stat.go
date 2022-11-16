@@ -113,7 +113,7 @@ func parseURL(uri string) *url.URL {
 
 // visit visits a url and times the interaction.
 // If the response is a 30x, visit follows the redirect.
-func httpTrace(url *url.URL, client *http.Client, req *http.Request, keyLog io.Writer) {
+func httpTrace(url *url.URL, client *http.Client, req *http.Request, keyLog io.Writer, rn int, cn int) {
 	// req := newRequest(httpMethod, url, postBody)
 	var ts, t0, t1, t2, t3, t4 time.Time
 	// var t0, t1, t2, t3, t4, t5, t6 time.Time
@@ -141,8 +141,10 @@ func httpTrace(url *url.URL, client *http.Client, req *http.Request, keyLog io.W
 		// TLSHandshakeDone:     func(_ tls.ConnectionState, _ error) { t6 = time.Now() },
 	}
 	req = req.WithContext(httptrace.WithClientTrace(context.Background(), trace))
+	printf("\n%s %s\n", color.HiMagentaString("[Client-%d REQUEST]", cn), color.GreenString("No.%d", rn))
 
 	resp, err := client.Do(req)
+
 	if err != nil {
 		log.Fatalf("failed to read response: %+v", err)
 	}
@@ -163,10 +165,8 @@ func httpTrace(url *url.URL, client *http.Client, req *http.Request, keyLog io.W
 	resp.Body.Close()
 
 	t7 := time.Now() // after read body
-	if t0.IsZero() {
-		// we skipped DNS
-		t0 = t1
-	}
+
+	printf("\n%s %s\n", color.HiMagentaString("[Client-%d RESPONSE]", cn), color.GreenString("No.%d", rn))
 
 	// print status line and headers
 	printf("\n%s%s%s\n", color.GreenString("HTTP"), grayscale(14)("/"), color.CyanString("%d.%d %s", resp.ProtoMajor, resp.ProtoMinor, resp.Status))
@@ -186,47 +186,55 @@ func httpTrace(url *url.URL, client *http.Client, req *http.Request, keyLog io.W
 
 	log.Println()
 
-	switch url.Scheme {
-	case "https":
-		printf(colorize(httpsTemplate),
-			fmta(t1.Sub(t0)), // dns lookup
-			fmta(t2.Sub(t1)), // tcp connection
-			fmta(t3.Sub(t2)), // tls handshake
-			// fmta(t6.Sub(t5)), // tls handshake
-			fmta(t4.Sub(t3)), // server processing
-			fmta(t7.Sub(t4)), // content transfer
-			fmtb(t1.Sub(t0)), // namelookup
-			fmtb(t2.Sub(t0)), // connect
-			fmtb(t3.Sub(t0)), // pretransfer
-			fmtb(t4.Sub(t0)), // starttransfer
-			fmtb(t7.Sub(t0)), // total
-		)
-		printTime("GetConn", ts)
-		printTimeDuration("DNS time", t0, t1)
-		printTimeDuration("TCP Connection", t1, t2)
-		printTimeDuration("TLS Handshake", t2, t3)
-		// printTime("TLS Handshake", t5, t6)
+	if t0.IsZero() {
+		t0 = t4
 		printTimeDuration("Server Processing", t3, t4)
 		printTimeDuration("Content Transfer", t4, t7)
-		printTimeDuration("HTTP2 TOTAL", t0, t7)
+		printTimeDuration("HTTP2 TOTAL", t3, t7)
 
-	case "http":
-		printf(colorize(httpTemplate),
-			fmta(t1.Sub(t0)), // dns lookup
-			fmta(t3.Sub(t1)), // tcp connection
-			fmta(t4.Sub(t3)), // server processing
-			fmta(t7.Sub(t4)), // content transfer
-			fmtb(t1.Sub(t0)), // namelookup
-			fmtb(t3.Sub(t0)), // connect
-			fmtb(t4.Sub(t0)), // starttransfer
-			fmtb(t7.Sub(t0)), // total
-		)
-		printTime("GetConn", ts)
-		printTimeDuration("DNS time", t0, t1)
-		printTimeDuration("TCP Connection", t1, t2)
-		printTimeDuration("Server Processing", t3, t4)
-		printTimeDuration("Content Transfer", t4, t7)
-		printTimeDuration("HTTP1 TOTAL", t0, t7)
+	} else {
+		switch url.Scheme {
+		case "https":
+			printf(colorize(httpsTemplate),
+				fmta(t1.Sub(t0)), // dns lookup
+				fmta(t2.Sub(t1)), // tcp connection
+				fmta(t3.Sub(t2)), // tls handshake
+				// fmta(t6.Sub(t5)), // tls handshake
+				fmta(t4.Sub(t3)), // server processing
+				fmta(t7.Sub(t4)), // content transfer
+				fmtb(t1.Sub(t0)), // namelookup
+				fmtb(t2.Sub(t0)), // connect
+				fmtb(t3.Sub(t0)), // pretransfer
+				fmtb(t4.Sub(t0)), // starttransfer
+				fmtb(t7.Sub(t0)), // total
+			)
+			printTime("GetConn", ts)
+			printTimeDuration("DNS time", t0, t1)
+			printTimeDuration("TCP Connection", t1, t2)
+			printTimeDuration("TLS Handshake", t2, t3)
+			// printTime("TLS Handshake", t5, t6)
+			printTimeDuration("Server Processing", t3, t4)
+			printTimeDuration("Content Transfer", t4, t7)
+			printTimeDuration("HTTP2 TOTAL", t0, t7)
+
+		case "http":
+			printf(colorize(httpTemplate),
+				fmta(t1.Sub(t0)), // dns lookup
+				fmta(t3.Sub(t1)), // tcp connection
+				fmta(t4.Sub(t3)), // server processing
+				fmta(t7.Sub(t4)), // content transfer
+				fmtb(t1.Sub(t0)), // namelookup
+				fmtb(t3.Sub(t0)), // connect
+				fmtb(t4.Sub(t0)), // starttransfer
+				fmtb(t7.Sub(t0)), // total
+			)
+			printTime("GetConn", ts)
+			printTimeDuration("DNS time", t0, t1)
+			printTimeDuration("TCP Connection", t1, t2)
+			printTimeDuration("Server Processing", t3, t4)
+			printTimeDuration("Content Transfer", t4, t7)
+			printTimeDuration("HTTP1 TOTAL", t0, t7)
+		}
 	}
 
 }

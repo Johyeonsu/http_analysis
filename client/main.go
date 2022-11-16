@@ -38,6 +38,7 @@ var (
 	addr            string
 	httpv           int
 	testClientNum   int
+	testReqNum      int
 	handlerReq      string
 )
 
@@ -56,7 +57,8 @@ func init() {
 	flag.BoolVar(&sixOnly, "6", false, "resolve IPv6 addresses only")
 	flag.StringVar(&addr, "addr", "", "host:port")
 	flag.IntVar(&httpv, "http", 3, "http Version")
-	flag.IntVar(&testClientNum, "t", 1, "test client")
+	flag.IntVar(&testClientNum, "c", 1, "test client num")
+	flag.IntVar(&testReqNum, "r", 1, "test request num")
 	flag.StringVar(&handlerReq, "req", "imgload", "request file, page etc..")
 
 	flag.Usage = usage
@@ -68,7 +70,8 @@ func main() {
 
 	// Set log Format
 	t := time.Now().Format("0102_030405")
-	logfn := fmt.Sprintf("client_http%d_%s.log", httpv, time.Now().Format("0102_030405"))
+	//logfn := fmt.Sprintf("client_http%d_%s.log", httpv, time.Now().Format("0102_030405"))
+	logfn := fmt.Sprintf("client_http%d.log", httpv)
 	log.SetFlags(0)
 
 	fpLog, err := os.OpenFile(logfn, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -90,65 +93,67 @@ func main() {
 	defer f.Close()
 	keyLog = f
 
-	var wg sync.WaitGroup
-	wg.Add(testClientNum)
-	cn := 0
-	for cn < testClientNum {
-		go func() {
+	if httpv == 1 {
+		transport := &http.DefaultTransport
+		client.Transport = newDumpTransport(*transport)
+		if addr == "" {
+			url = parseURL(fmt.Sprintf("http://http-pf.kro.kr:7071/%s", handlerReq))
+		}
 
-			if httpv == 1 {
-				transport := &http.DefaultTransport
-				client.Transport = newDumpTransport(*transport)
-				if addr == "" {
-					url = parseURL(fmt.Sprintf("http://http-pf.kro.kr:7071/%s", handlerReq))
-				}
+	} else if httpv == 2 {
+		transport := &http2.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: insecure,
+				RootCAs:            CaCert(),
+				KeyLogWriter:       keyLog,
+				MinVersion:         tls.VersionTLS12,
+			},
+		}
+		client.Transport = newDumpTransport(transport)
 
-			} else if httpv == 2 {
-				transport := &http2.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: insecure,
-						RootCAs:            CaCert(),
-						KeyLogWriter:       keyLog,
-						MinVersion:         tls.VersionTLS12,
-					},
-				}
-				client.Transport = newDumpTransport(transport)
+		if addr == "" {
+			url = parseURL(fmt.Sprintf("https://http-pf.kro.kr:7072/%s", handlerReq))
+		}
 
-				if addr == "" {
-					url = parseURL(fmt.Sprintf("https://http-pf.kro.kr:7072/%s", handlerReq))
-				}
-
-			} else if httpv == 3 {
-				var qconf quic.Config
-				qconf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {
-					filename := fmt.Sprintf("client_%s_%x.qlog", t, connID)
-					f, err := os.Create(filename)
-					if err != nil {
-						log.Fatal(err)
-					}
-					log.Printf("Creating qlog file %s.\n", filename)
-					return NewBufferedWriteCloser(bufio.NewWriter(f), f)
-				})
-
-				transport := &http3.RoundTripper{
-					TLSClientConfig: tlsConfig(keyLog),
-					QuicConfig:      &qconf,
-				}
-
-				client.Transport = newDumpTransport(transport)
-				defer transport.Close()
-				if addr == "" {
-					url = parseURL(fmt.Sprintf("https://http-pf.kro.kr:7073/%s", handlerReq))
-				}
-			} else {
-				log.Fatalf("Only support http Version 1, 2, 3")
+	} else if httpv == 3 {
+		var qconf quic.Config
+		qconf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {
+			filename := fmt.Sprintf("client_%s_%x.qlog", t, connID)
+			f, err := os.Create(filename)
+			if err != nil {
+				log.Fatal(err)
 			}
-			sendRequest(url, client, keyLog, httpv)
-			wg.Done()
-		}()
+			log.Printf("Creating qlog file %s.\n", filename)
+			return NewBufferedWriteCloser(bufio.NewWriter(f), f)
+		})
+		transport := &http3.RoundTripper{
+			TLSClientConfig: tlsConfig(keyLog),
+			QuicConfig:      &qconf,
+		}
+		client.Transport = newDumpTransport(transport)
+		defer transport.Close()
+		if addr == "" {
+			url = parseURL(fmt.Sprintf("https://http-pf.kro.kr:7073/%s", handlerReq))
+		}
+
+	} else {
+		log.Fatalf("Only support http Version 1, 2, 3")
+	}
+
+	var wg1 sync.WaitGroup
+	wg1.Add(testClientNum)
+	cn := 0
+	t_start := time.Now()
+	for cn < testClientNum {
+		go func(cn int) {
+			sendRequest(url, client, keyLog, httpv, testReqNum, cn)
+			wg1.Done()
+		}(cn)
 		cn++
 
 	}
-	wg.Wait()
+	wg1.Wait()
+	loginfo := fmt.Sprintf("HTTP%d TOTAL RUN", httpv)
+	printTimeDuration(loginfo, t_start, time.Now())
 	time.Sleep(3 * time.Second)
 }

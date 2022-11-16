@@ -49,7 +49,7 @@ func (t *DumpTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println(string(b))
+	log.Print(string(b))
 	resp, err := t.Transport.RoundTrip(req)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,8 @@ func (h bufferedWriteCloser) Close() error {
 	return h.Closer.Close()
 }
 
-func sendRequest(url *url.URL, client *http.Client, keyLog io.Writer, httpv int) *http.Request {
+func sendRequest(url *url.URL, client *http.Client, keyLog io.Writer, httpv int, testReqNum int, cn int) *http.Request {
+	rn := 0
 	req, err := http.NewRequest(httpMethod, url.String(), nil)
 	if err != nil {
 		log.Fatalf("%+v", err)
@@ -89,16 +90,21 @@ func sendRequest(url *url.URL, client *http.Client, keyLog io.Writer, httpv int)
 
 	req.Header.Add("Accept-Charset", "UTF-8;q=1, ISO-8859-1;q=0")
 	req.Header.Add("Connection", "Keep-Alive")
+	// req.Header.Add("Connection", "Close")
 
-	if httpv == 3 {
-		t := time.Now()
-		_, err := client.Do(req)
-		if err != nil {
-			log.Fatalf("failed to read response: %+v", err)
+	for rn < testReqNum {
+		if httpv == 3 {
+			h3t := time.Now()
+			_, err := client.Do(req)
+			if err != nil {
+				log.Fatalf("failed to read response: %+v", err)
+			}
+			printTimeDuration("HTTP3 TOTAL", h3t, time.Now())
+		} else {
+			httpTrace(url, client, req, keyLog, rn, cn)
 		}
-		printTimeDuration("HTTP3 TOTAL", t, time.Now())
-	} else {
-		httpTrace(url, client, req, keyLog)
+		rn++
 	}
+
 	return req
 }
