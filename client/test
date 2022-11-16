@@ -1,0 +1,46 @@
+sudo tc qdisc show dev enp0s3
+sleep 1
+
+i=$2
+
+until [ $i -ge $3 ]
+do
+
+    echo "----------------------------------------------------$1 $i TEST START"
+        
+    if [ $1 = 'loss' ]
+    then
+        sudo tc qdisc add dev enp0s3 root netem loss ${i}%
+
+    elif [ $1 = 'cor' ]
+    then
+        sudo tc qdisc add dev enp0s3 root netem corrupt ${i}%
+
+    elif [ $1 = 'dup' ]
+    then
+        sudo tc qdisc add dev enp0s3 root netem duplicate ${i}%
+
+    elif [ $1 = 'delay' ]
+    then
+        sudo tc qdisc add dev enp0s3 root netem delay ${i}ms
+    fi
+   
+    if [ $1 = 't' ]
+    then
+        ./client -http $5 -t $i
+        mv client_http${5}.log ${1}${i}_client_http${5}.log
+
+    else
+        sudo tc qdisc show dev enp0s3
+        sleep 1
+        ./client -http ${5}
+        sudo tc qdisc del dev enp0s3 root
+    fi
+    i=$(expr $i + $4)
+
+    echo "----------------------------------------------------$1 $a TEST DONE"
+    echo ""
+
+
+done
+
