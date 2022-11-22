@@ -59,7 +59,6 @@ func runHttp2(portNum string) {
 }
 
 func runHttp3(portNum string) {
-	_, cancelCtx := context.WithCancel(context.Background())
 	handler := setHandler()
 
 	log.Printf("[HTTP3] Serving on https://%s", portNum)
@@ -67,6 +66,5 @@ func runHttp3(portNum string) {
 	if err := http3.ListenAndServe(portNum, certFile, keyFile, handler); err != nil {
 		log.Fatalf("%v", err)
 	}
-	defer cancelCtx()
 
 }

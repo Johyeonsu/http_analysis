@@ -3,13 +3,10 @@ package main
 import (
 	"flag"
 	"log"
-	"runtime"
 	"sync"
 )
 
 func main() {
-
-	runtime.SetBlockProfileRate(1)
 
 	httpv := flag.Int("http", 1, "http Version")
 	addr := flag.String("addr", ":7071", "host:port")
