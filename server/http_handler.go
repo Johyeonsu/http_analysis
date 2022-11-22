@@ -19,8 +19,6 @@ const uploadPath = defaultPath + "upload/"
 const downloadPath = "/home/hyeonsu/Downloads/"
 const testImgNum = 1
 
-const keyServerAddr = "serverAddr"
-
 func printNow() string {
 	return time.Now().Format("15:04:05.000000")
 }
@@ -29,8 +27,6 @@ func setHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("public")))
 	mux.HandleFunc("/imgload", imgloadHandler)
-
-	// mux.HandleFunc("/", imgloadHandler)
 
 	mux.HandleFunc("/imgpusher", imgPusherHandler)
 	mux.HandleFunc("/upload", uploadHandler)
@@ -58,12 +54,12 @@ func imgloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("%s [%s] %s, %s, %s\n", printNow(), ctx.Value(keyServerAddr), r.Method, r.URL, r.Proto)
 
-//	pusher, ok := w.(http.Pusher)
-//	if ok {
-//		fmt.Printf("%s [%s] Push %s\n", printNow(), ctx.Value(keyServerAddr), r.URL)
-//		pusher.Push("/imgpusher", nil)
-//		fmt.Printf("%s [%s] %s\n", printNow(), ctx.Value(keyServerAddr), "Send Push")
-//	}
+	//	pusher, ok := w.(http.Pusher)
+	//	if ok {
+	//		fmt.Printf("%s [%s] Push %s\n", printNow(), ctx.Value(keyServerAddr), r.URL)
+	//		pusher.Push("/imgpusher", nil)
+	//		fmt.Printf("%s [%s] %s\n", printNow(), ctx.Value(keyServerAddr), "Send Push")
+	//	}
 
 	w.Header().Add("Content-Type", "text/html")
 

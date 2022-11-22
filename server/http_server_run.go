@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/lucas-clemente/quic-go/http3"
@@ -11,28 +13,41 @@ import (
 
 const certFile = "../cert/certificate.crt"
 const keyFile = "../cert/private.key"
+const keyServerAddr = "serverAddr"
 
 func runHttp1(portNum string) {
+	ctx, cancelCtx := context.WithCancel(context.Background())
 	handler := setHandler()
+
 	server := &http.Server{
 		Addr:    portNum,
 		Handler: handler,
+		BaseContext: func(l net.Listener) context.Context {
+			ctx = context.WithValue(ctx, keyServerAddr, l.Addr().String())
+			return ctx
+		},
 	}
+
 	log.Printf("[HTTP1] Serving on http://%s", portNum)
-	// return server
+
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("%v", err)
 	}
+	defer cancelCtx()
 }
 
 func runHttp2(portNum string) {
+	ctx, cancelCtx := context.WithCancel(context.Background())
 	handler := setHandler()
 
 	h2s := &http2.Server{}
 	h1s := &http.Server{
 		Addr:    portNum,
 		Handler: h2c.NewHandler(handler, h2s),
-		// TLSConfig: ,
+		BaseContext: func(l net.Listener) context.Context {
+			ctx = context.WithValue(ctx, keyServerAddr, l.Addr().String())
+			return ctx
+		},
 	}
 
 	log.Printf("[HTTP2] Serving on https://%s", portNum)
@@ -40,9 +55,11 @@ func runHttp2(portNum string) {
 	if err := h1s.ListenAndServeTLS(certFile, keyFile); err != nil {
 		log.Fatalf("%v", err)
 	}
+	defer cancelCtx()
 }
 
 func runHttp3(portNum string) {
+	_, cancelCtx := context.WithCancel(context.Background())
 	handler := setHandler()
 
 	log.Printf("[HTTP3] Serving on https://%s", portNum)
@@ -50,16 +67,6 @@ func runHttp3(portNum string) {
 	if err := http3.ListenAndServe(portNum, certFile, keyFile, handler); err != nil {
 		log.Fatalf("%v", err)
 	}
+	defer cancelCtx()
 
 }
-
-// func runHttp1(portNum string) error {
-// 	handler := setHandler()
-// 	server := &http.Server{
-// 		Addr:    portNum,
-// 		Handler: handler,
-// 	}
-// 	log.Printf("[HTTP1] Serving on http://%s", portNum)
-// 	// return server
-// 	return server.ListenAndServe()
-// }

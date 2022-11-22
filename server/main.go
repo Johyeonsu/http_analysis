@@ -1,17 +1,10 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
 	"log"
-	"net"
-	"net/http"
 	"runtime"
-
-	"github.com/lucas-clemente/quic-go/http3"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
+	"sync"
 )
 
 func main() {
@@ -24,58 +17,24 @@ func main() {
 	flag.Parse()
 
 	if *all {
-		ctx, cancelCtx := context.WithCancel(context.Background())
-		const keyServerAddr = "serverAddr"
-
-		handler := setHandler()
-		h1server := &http.Server{
-			Addr:    ":7071",
-			Handler: handler,
-			BaseContext: func(l net.Listener) context.Context {
-				ctx = context.WithValue(ctx, keyServerAddr, l.Addr().String())
-				return ctx
-			},
-		}
-
-		h2s := &http2.Server{}
-		h2server := &http.Server{
-			Addr:    ":7072",
-			Handler: h2c.NewHandler(handler, h2s),
-			BaseContext: func(l net.Listener) context.Context {
-				ctx = context.WithValue(ctx, keyServerAddr, l.Addr().String())
-				return ctx
-				// TLSConfig: ,
-			},
-		}
-
-		// h3server := &http3.Server{}
-		// h3server.ServerContextKey = keyServerAddr
+		var wg sync.WaitGroup
+		wg.Add(3)
 
 		go func() {
-			err := h1server.ListenAndServe()
-			if err != nil {
-				fmt.Printf("%+v", err)
-			}
-			defer cancelCtx()
+			runHttp1(":7071")
+			wg.Done()
 		}()
 
 		go func() {
-			err := h2server.ListenAndServeTLS(certFile, keyFile)
-			if err != nil {
-				fmt.Printf("%+v", err)
-			}
-			defer cancelCtx()
+			runHttp2(":7072")
+			wg.Done()
 		}()
 
 		go func() {
-			err := http3.ListenAndServe(":7073", certFile, keyFile, handler)
-			if err != nil {
-				fmt.Printf("%+v", err)
-			}
-			defer cancelCtx()
+			runHttp3(":7073")
+			wg.Done()
 		}()
-		<-ctx.Done()
-
+		wg.Wait()
 	} else {
 		switch *httpv {
 		case 1:
