@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/http3"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -62,8 +63,26 @@ func runHttp3(portNum string) {
 	handler := setHandler()
 
 	log.Printf("[HTTP3] Serving on https://%s", portNum)
+	quicConf := &quic.Config{}
 
-	if err := http3.ListenAndServeQUIC(portNum, certFile, keyFile, handler); err != nil {
+	// quicConf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {
+	// 	filename := fmt.Sprintf("server_%x.qlog", connID)
+	// 	f, err := os.Create(filename)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	log.Printf("Creating qlog file %s.\n", filename)
+	// 	return utils.NewBufferedWriteCloser(bufio.NewWriter(f), f)
+	// })
+
+	server := http3.Server{
+		Handler:    handler,
+		Addr:       portNum,
+		QuicConfig: quicConf,
+	}
+
+	if err := server.ListenAndServeTLS(certFile, keyFile); err != nil {
+		// if err := http3.ListenAndServeQUIC(portNum, certFile, keyFile, handler); err != nil {
 		log.Fatalf("%v", err)
 	}
 
