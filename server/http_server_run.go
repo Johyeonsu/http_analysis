@@ -63,7 +63,7 @@ func runHttp3(portNum string) {
 
 	log.Printf("[HTTP3] Serving on https://%s", portNum)
 
-	if err := http3.ListenAndServe(portNum, certFile, keyFile, handler); err != nil {
+	if err := http3.ListenAndServeQUIC(portNum, certFile, keyFile, handler); err != nil {
 		log.Fatalf("%v", err)
 	}
 

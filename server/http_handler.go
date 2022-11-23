@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -21,7 +21,7 @@ func setHandler() http.Handler {
 
 	mux.Handle("/",
 		handlers.CombinedLoggingHandler(
-			os.Stdout, http.FileServer(http.Dir("public"))))
+			log.Writer(), http.FileServer(http.Dir("public"))))
 
 	mux.HandleFunc("/pageload", pageloadHandler)
 	mux.HandleFunc("/imgpusher", imgPusherHandler)
