@@ -11,6 +11,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"time"
+
+	"github.com/lucas-clemente/quic-go/http3"
 )
 
 const certFile = "../cert/certificate.crt"
@@ -60,6 +62,7 @@ func (t *DumpTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	log.Println(len(string(b)), "bytes")
 	return resp, nil
+
 }
 
 type bufferedWriteCloser struct {
@@ -90,11 +93,13 @@ func sendRequest(url *url.URL, client *http.Client, keyLog io.Writer, httpv int,
 
 	req.Header.Add("Accept-Charset", "UTF-8;q=1, ISO-8859-1;q=0")
 	req.Header.Add("Connection", "Keep-Alive")
-	// req.Header.Add("Connection", "Close")
-
+	req.Header.Add("Connection", "Close")
+	h3t := time.Now()
 	for rn < testReqNum {
 		if httpv == 3 {
-			h3t := time.Now()
+			req.Method = http3.MethodGet0RTT
+			// rsp, err := client3.Transport.RoundTripOpt(req, RoundTripOpt{OnlyCachedConn: true})
+
 			_, err := client.Do(req)
 			if err != nil {
 				log.Fatalf("failed to read response: %+v", err)

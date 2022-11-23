@@ -188,9 +188,10 @@ func httpTrace(url *url.URL, client *http.Client, req *http.Request, keyLog io.W
 
 	if t0.IsZero() {
 		t0 = t4
+		printTime("GetConn", ts)
 		printTimeDuration("Server Processing", t3, t4)
 		printTimeDuration("Content Transfer", t4, t7)
-		printTimeDuration("HTTP2 TOTAL", t3, t7)
+		printTimeDuration(fmt.Sprintf("HTTP/%d.%d TOTAL", resp.ProtoMajor, resp.ProtoMinor), t3, t7)
 
 	} else {
 		switch url.Scheme {
@@ -242,18 +243,6 @@ func httpTrace(url *url.URL, client *http.Client, req *http.Request, keyLog io.W
 func isRedirect(resp *http.Response) bool {
 	return resp.StatusCode > 299 && resp.StatusCode < 400
 }
-
-// func createBody(body string) io.Reader {
-// 	if strings.HasPrefix(body, "@") {
-// 		filename := body[1:]
-// 		f, err := os.Open(filename)
-// 		if err != nil {
-// 			log.Fatalf("failed to open data file %s: %+v", filename, err)
-// 		}
-// 		return f
-// 	}
-// 	return strings.NewReader(body)
-// }
 
 // getFilenameFromHeaders tries to automatically determine the output filename,
 // when saving to disk, based on the Content-Disposition header.
