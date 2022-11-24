@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net"
 	"net/http"
@@ -62,8 +63,18 @@ func runHttp2(portNum string) {
 func runHttp3(portNum string) {
 	handler := setHandler()
 
+	var err error
 	log.Printf("[HTTP3] Serving on https://%s", portNum)
+	certs := make([]tls.Certificate, 1)
+	certs[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("%+v", err)
+	}
+
 	quicConf := &quic.Config{}
+	tlsConf := &tls.Config{
+		Certificates: certs,
+	}
 
 	// quicConf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {
 	// 	filename := fmt.Sprintf("server_%x.qlog", connID)
@@ -75,13 +86,15 @@ func runHttp3(portNum string) {
 	// 	return utils.NewBufferedWriteCloser(bufio.NewWriter(f), f)
 	// })
 
+	tlsConf = http3.ConfigureTLSConfig(tlsConf)
 	server := http3.Server{
 		Handler:    handler,
 		Addr:       portNum,
 		QuicConfig: quicConf,
+		TLSConfig:  tlsConf,
 	}
 
-	if err := server.ListenAndServeTLS(certFile, keyFile); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		// if err := http3.ListenAndServeQUIC(portNum, certFile, keyFile, handler); err != nil {
 		log.Fatalf("%v", err)
 	}

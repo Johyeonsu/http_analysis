@@ -4,10 +4,13 @@ import (
 	"flag"
 	"log"
 	"sync"
+
+	"github.com/lucas-clemente/quic-go/internal/utils"
 )
 
 func main() {
-
+	logger := utils.DefaultLogger
+	logger.SetLogLevel(utils.LogLevelDebug)
 	httpv := flag.Int("http", 1, "http Version")
 	addr := flag.String("addr", ":7071", "host:port")
 	all := flag.Bool("all", false, "open 3 port, ignore addr option")
